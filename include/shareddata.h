@@ -65,6 +65,7 @@ namespace SharedData
 struct PidMap {
   pid_t virt;
   pid_t real;
+  int64_t valid;
 };
 
 struct IPCIdMap {
@@ -204,6 +205,7 @@ void setIPCIdMap(int type, int32_t virt, int32_t real);
 
 pid_t getRealPid(pid_t virt);
 void setPidMap(pid_t virt, pid_t real);
+void deletePid(pid_t virt);
 
 void getRealPtyName(const char *virt, char *out, uint32_t len);
 void getVirtPtyName(const char *real, char *out, uint32_t len);

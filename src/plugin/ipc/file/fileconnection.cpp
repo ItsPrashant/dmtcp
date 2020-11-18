@@ -769,21 +769,21 @@ StdioConnection::postRestart()
   for (size_t i = 0; i < _fds.size(); ++i) {
     int fd = _fds[i];
     if (fd <= 2) {
-      JTRACE("Skipping restore of STDIO, just inherit from parent") (fd);
+      JNOTE("Skipping restore of STDIO, just inherit from parent") (fd);
       continue;
     }
     int oldFd = -1;
     switch (_type) {
     case STDIO_IN:
-      JTRACE("Restoring STDIN") (fd);
+      JNOTE("Restoring STDIN") (fd);
       oldFd = 0;
       break;
     case STDIO_OUT:
-      JTRACE("Restoring STDOUT") (fd);
+      JNOTE("Restoring STDOUT") (fd);
       oldFd = 1;
       break;
     case STDIO_ERR:
-      JTRACE("Restoring STDERR") (fd);
+      JNOTE("Restoring STDERR") (fd);
       oldFd = 2;
       break;
     default:

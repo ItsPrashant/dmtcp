@@ -236,6 +236,19 @@ int dmtcp_is_enabled(void) __attribute((weak));
 
 /**
  * Checkpoint the entire distributed computation
+ *   (It is a blocking version of dmtcp_checkpoint().
+ *   It should block until the checkpoint is complete.)
+ * + returns DMTCP_AFTER_CHECKPOINT if the checkpoint succeeded.
+ * + returns DMTCP_AFTER_RESTART    after a restart.
+ * + returns <=0 on error.
+ * See: test/plugin/applic-initiated-ckpt directory for an exammple:
+ */
+int dmtcp_blocking_checkpoint(void) __attribute__((weak));
+#define dmtcp_blocking_checkpoint() \
+  (dmtcp_blocking_checkpoint ? dmtcp_blocking_checkpoint() : DMTCP_NOT_PRESENT)
+
+/**
+ * Checkpoint the entire distributed computation
  *   (Does not necessarily block until checkpoint is complete.
  *    Use dmtcp_get_generation() to test if checkpoint is complete.)
  * NOTE:  This macro is blocking.  dmtcp_checkpoint() will not return

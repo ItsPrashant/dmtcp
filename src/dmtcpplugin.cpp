@@ -33,6 +33,7 @@
 
 #undef dmtcp_is_enabled
 #undef dmtcp_checkpoint
+#undef dmtcp_blocking_checkpoint
 #undef dmtcp_disable_ckpt
 #undef dmtcp_enable_ckpt
 #undef dmtcp_get_coordinator_status
@@ -68,6 +69,45 @@ memfence() {  RMB; WMB; }
 
 EXTERNC int
 dmtcp_is_enabled() { return 1; }
+
+EXTERNC int
+dmtcp_blocking_checkpoint()
+{
+  size_t oldNumRestarts, oldNumCheckpoints;
+
+  while (1) {
+    WRAPPER_EXECUTION_GET_EXCL_LOCK();
+
+    int status;
+    CoordinatorAPI::connectAndSendUserCommand('b', &status);
+    CoordinatorAPI::connectAndSendUserCommand('c', &status);
+
+    if (status != CoordCmdStatus::ERROR_NOT_RUNNING_STATE) {
+      oldNumRestarts = ProcessInfo::instance().numRestarts();
+      oldNumCheckpoints = ProcessInfo::instance().numCheckpoints();
+      WRAPPER_EXECUTION_RELEASE_EXCL_LOCK();
+      break;
+    }
+
+    WRAPPER_EXECUTION_RELEASE_EXCL_LOCK();
+
+    struct timespec t = { 0, 100 * 1000 * 1000 }; // 100ms.
+    nanosleep(&t, NULL);
+  }
+
+  while (oldNumRestarts == ProcessInfo::instance().numRestarts() &&
+         oldNumCheckpoints == ProcessInfo::instance().numCheckpoints()) {
+    // nanosleep should get interrupted by checkpointing with an EINTR error
+    // though there is a race to get to nanosleep() before the checkpoint
+    struct timespec t = { 1, 0 };
+    nanosleep(&t, NULL);
+    memfence();  // make sure the loop condition doesn't get optimized
+  }
+
+  return ProcessInfo::instance().numRestarts() == oldNumRestarts
+         ? DMTCP_AFTER_CHECKPOINT : DMTCP_AFTER_RESTART;
+}
+
 
 EXTERNC int
 dmtcp_checkpoint()

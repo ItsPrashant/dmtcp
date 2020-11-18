@@ -36,6 +36,10 @@
 #include "util.h"
 #include "virtualpidtable.h"
 
+/*Included by prashant*/
+#include "shareddata.h"
+#include "protectedfds.h"
+
 using namespace dmtcp;
 
 static __thread pid_t _dmtcp_thread_tid = -1;
@@ -436,6 +440,7 @@ waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
 
       if (siginfop.si_code == CLD_EXITED || siginfop.si_code == CLD_KILLED) {
         VirtualPidTable::instance().erase(virtualPid);
+        SharedData::deletePid(virtualPid);
       }
     }
     DMTCP_PLUGIN_ENABLE_CKPT();
@@ -523,6 +528,7 @@ wait4(pid_t pid, __WAIT_STATUS status, int options, struct rusage *rusage)
     if (retval > 0 &&
         (WIFEXITED(*(int *)status) || WIFSIGNALED(*(int *)status))) {
       VirtualPidTable::instance().erase(virtualPid);
+      SharedData::deletePid(virtualPid);
     }
     DMTCP_PLUGIN_ENABLE_CKPT();
 

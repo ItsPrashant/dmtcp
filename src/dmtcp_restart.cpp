@@ -53,6 +53,7 @@ using namespace dmtcp;
 #endif // ifdef HBICT_DELTACOMP
 
 static void setEnvironFd();
+extern char afl_hackery[] = "__AFL_SHM_ID";
 
 // gcc-4.3.4 -Wformat=2 issues false positives for warnings unless the format
 // string has at least one format specifier with corresponding format argument.
@@ -752,7 +753,8 @@ main(int argc, char **argv)
 {
   char *tmpdir_arg = NULL;
   char *ckptdir_arg = NULL;
-
+  volatile int dummy=1;
+  // while(dummy);
   initializeJalib();
 
   if (!getenv(ENV_VAR_QUIET)) {

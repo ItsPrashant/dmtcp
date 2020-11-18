@@ -23,6 +23,7 @@
 // So, we temporarily rename it so that type declarations are not for msgrcv.
 #define msgrcv msgrcv_glibc
 
+#include <stdlib.h>
 #include <stdarg.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
@@ -60,6 +61,8 @@ static __thread bool inside_shmdt = false;
  *
  *****************************************************************************/
 
+ volatile int afl_hack_shmid=-1,first_time=0;
+ 
 extern "C"
 int
 shmget(key_t key, size_t size, int shmflg)
@@ -109,7 +112,32 @@ shmget(key_t key, size_t size, int shmflg)
 extern "C"
 void *shmat(int shmid, const void *shmaddr, int shmflg)
 {
+
+  FILE *fp; 
+  fp=fopen("/tmp/prashant_log.txt","w");
   DMTCP_PLUGIN_DISABLE_CKPT();
+  if(first_time==0){
+	char aflenv[20];
+	memset(aflenv,'\0',sizeof(aflenv));
+	FILE *afl_fp=fopen("./dmtcp_env.txt","r");
+	if(afl_fp!=NULL){
+		fprintf(fp,"dmtcp_env file found\n");
+		int bytes=fread(aflenv, 1, 20, afl_fp);
+		aflenv[sizeof(aflenv)]='\n';
+		afl_hack_shmid=strtol(aflenv,NULL,10);
+		fclose(afl_fp);
+	}
+	first_time=1;
+  }
+  if(shmid==afl_hack_shmid){
+	fprintf(fp,"afl and shmid matched\n");
+	fclose(fp);
+	  void *ret=_real_shmat(shmid, shmaddr, shmflg);
+  	  DMTCP_PLUGIN_ENABLE_CKPT();
+	  return ret;
+  }
+  fprintf(fp,"shmid and afl ID didn't match, shmid:%d , afl_shmid:%d\n",shmid,afl_hack_shmid);
+  fclose(fp);
   int realShmid = VIRTUAL_TO_REAL_SHM_ID(shmid);
   JASSERT(realShmid != -1).Text("Not Implemented");
   void *ret = _real_shmat(realShmid, shmaddr, shmflg);
@@ -197,6 +225,22 @@ int
 shmctl(int shmid, int cmd, struct shmid_ds *buf)
 {
   DMTCP_PLUGIN_DISABLE_CKPT();
+  if(first_time==0){
+	char aflenv[25];
+	FILE *afl_fp=fopen("./dmtcp_env.txt","r");
+	if(afl_fp!=NULL){
+		fread(aflenv, 1, 20, afl_fp);
+		afl_hack_shmid=atoi(aflenv);
+		afl_hack_shmid/=10;
+		fclose(afl_fp);
+	}
+	first_time=1;
+  }
+  if(shmid==afl_hack_shmid){
+	int ret=_real_shmctl(shmid, cmd, buf);
+	DMTCP_PLUGIN_ENABLE_CKPT();
+  	return ret; 
+  }
   int realShmid = VIRTUAL_TO_REAL_SHM_ID(shmid);
   JASSERT(realShmid != -1);
   int ret = _real_shmctl(realShmid, cmd, buf);

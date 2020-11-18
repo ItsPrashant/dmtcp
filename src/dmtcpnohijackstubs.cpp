@@ -24,6 +24,7 @@
 
 #undef dmtcp_is_enabled
 #undef dmtcp_checkpoint
+#undef dmtcp_blocking_checkpoint
 #undef dmtcp_disable_ckpt
 #undef dmtcp_enable_ckpt
 #undef dmtcp_get_libc_addr

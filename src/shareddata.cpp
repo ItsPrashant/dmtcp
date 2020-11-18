@@ -515,15 +515,43 @@ SharedData::setPidMap(pid_t virt, pid_t real)
   Util::lockFile(PROTECTED_SHM_FD);
   for (i = 0; i < sharedDataHeader->numPidMaps; i++) {
     if (sharedDataHeader->pidMap[i].virt == virt) {
+      JWARNING(sharedDataHeader->pidMap[i].valid != 0).Text("Accessing deleted PID");    
       sharedDataHeader->pidMap[i].real = real;
       break;
+    }
+  }
+  if (i == sharedDataHeader->numPidMaps) {
+    for (i = 0; i < sharedDataHeader->numPidMaps; i++) {
+      if (!sharedDataHeader->pidMap[i].valid) {
+        sharedDataHeader->pidMap[i].real = real;
+        sharedDataHeader->pidMap[i].virt = virt;
+        sharedDataHeader->pidMap[i].valid = 1;
+        break;
+      }
     }
   }
   if (i == sharedDataHeader->numPidMaps) {
     JASSERT(sharedDataHeader->numPidMaps < MAX_PID_MAPS);
     sharedDataHeader->pidMap[i].virt = virt;
     sharedDataHeader->pidMap[i].real = real;
+    sharedDataHeader->pidMap[i].valid = 1;
     sharedDataHeader->numPidMaps++;
+  }
+  Util::unlockFile(PROTECTED_SHM_FD);
+}
+
+void
+SharedData::deletePid(pid_t virt)
+{
+  if (sharedDataHeader == NULL) {
+    initialize();
+  }
+  Util::lockFile(PROTECTED_SHM_FD);
+  for (size_t i = 0; i < sharedDataHeader->numPidMaps; i++) {
+    if (sharedDataHeader->pidMap[i].virt == virt) {
+      JWARNING(sharedDataHeader->pidMap[i].valid != 0).Text("Deleting same PID twice");    
+      sharedDataHeader->pidMap[i].valid = 0;
+    }
   }
   Util::unlockFile(PROTECTED_SHM_FD);
 }
